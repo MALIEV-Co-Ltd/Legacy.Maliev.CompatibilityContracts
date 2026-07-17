@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Legacy.Maliev.CompatibilityContracts</AssemblyName>
+    <RootNamespace>Maliev.MessagingContracts.Contracts</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>Legacy.Maliev.CompatibilityContracts</PackageId>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <Authors>MALIEV</Authors>
+    <Company>MALIEV Co., Ltd.</Company>
+    <Description>Minimal wire-compatible message contracts for extracted legacy MALIEV services.</Description>
+    <PackageTags>legacy;contracts;messaging;iam;masstransit</PackageTags>
+    <RepositoryUrl>https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>
