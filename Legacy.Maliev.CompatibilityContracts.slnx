@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/Legacy.Maliev.CompatibilityContracts/Legacy.Maliev.CompatibilityContracts.csproj" />
+  <Project Path="tests/Legacy.Maliev.CompatibilityContracts.Tests/Legacy.Maliev.CompatibilityContracts.Tests.csproj" />
+</Solution>
