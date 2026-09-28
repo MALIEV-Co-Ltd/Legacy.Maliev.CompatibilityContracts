@@ -16,7 +16,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Validate .NET solution
-        uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@f7bafd4ba7e8e6e92a0b7d853150f3ca60e1eae6
+        uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@73dd7304ffe85ec504389fd7664cc39070b9f148
         with:
           solution: Legacy.Maliev.CompatibilityContracts.slnx
       - name: Verify package can be produced
