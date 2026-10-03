@@ -16,6 +16,14 @@ Initial source baseline:
 - shared `BaseMessage` envelope
 - stable `MessageType` names and ordinals
 - IAM `PermissionRegistrationRequest` and its permission/role item records
+- retained `Maliev.Common` social destinations, file-format registry, and enumerations
+- `Maliev.AspNetCore.DataAnnotations.BooleanRequiredAttribute`, which requires a
+  boolean value and accepts both `true` and `false`
+
+The retained Common and validation types keep their original CLR namespaces and
+public accessors. Their migration source is `maliev-web` at
+`135e526d0dab85c415b3afdcefd7b70fe2c82e2f`; see
+[the scoped acceptance record](docs/retained-common-contracts.md).
 
 Unrelated pricing, geometry, customer, notification, and other new-platform
 contracts are deliberately excluded.
