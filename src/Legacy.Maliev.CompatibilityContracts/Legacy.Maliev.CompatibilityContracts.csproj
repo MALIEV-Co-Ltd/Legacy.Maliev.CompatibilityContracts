@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>Legacy.Maliev.CompatibilityContracts</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <RootNamespace>Maliev.MessagingContracts.Contracts</RootNamespace>
     <IsPackable>true</IsPackable>
     <PackageId>Legacy.Maliev.CompatibilityContracts</PackageId>

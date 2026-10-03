@@ -22,3 +22,12 @@ jobs:
       - name: Verify package can be produced
         shell: bash
         run: dotnet pack src/Legacy.Maliev.CompatibilityContracts/Legacy.Maliev.CompatibilityContracts.csproj --configuration Release --no-build --no-restore --output artifacts
+      - name: Measure raw owned assembly coverage without exclusions
+        shell: bash
+        run: dotnet test Legacy.Maliev.CompatibilityContracts.slnx --configuration Release --no-build --no-restore --collect "XPlat Code Coverage" --settings coverage.runsettings --results-directory coverage-results
+      - name: Require at least 80 percent raw owned assembly coverage
+        shell: pwsh
+        run: |
+          $reports = @(Get-ChildItem -LiteralPath coverage-results -Filter coverage.cobertura.xml -Recurse)
+          if ($reports.Count -ne 1) { throw "Expected exactly one owned assembly coverage report." }
+          ./eng/Assert-OwnedCoverage.ps1 -CoveragePath $reports[0].FullName

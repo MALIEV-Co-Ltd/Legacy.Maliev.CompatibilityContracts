@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>[Legacy.Maliev.CompatibilityContracts]*</Include>
+          <Exclude></Exclude>
+          <ExcludeByAttribute></ExcludeByAttribute>
+          <ExcludeByFile></ExcludeByFile>
+          <SkipAutoProps>false</SkipAutoProps>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
