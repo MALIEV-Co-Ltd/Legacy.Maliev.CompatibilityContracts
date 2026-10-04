@@ -16,7 +16,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Validate .NET solution
-        uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@73dd7304ffe85ec504389fd7664cc39070b9f148
+        uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e3a6093324a24968876782153286f52db8b29fd8
         with:
           solution: Legacy.Maliev.CompatibilityContracts.slnx
       - name: Verify package can be produced
@@ -31,3 +31,11 @@ jobs:
           $reports = @(Get-ChildItem -LiteralPath coverage-results -Filter coverage.cobertura.xml -Recurse)
           if ($reports.Count -ne 1) { throw "Expected exactly one owned assembly coverage report." }
           ./eng/Assert-OwnedCoverage.ps1 -CoveragePath $reports[0].FullName
+      - name: Preserve raw compatibility coverage
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: compatibility-raw-coverage-${{ github.sha }}
+          path: coverage-results/
+          if-no-files-found: warn
+          retention-days: 7
