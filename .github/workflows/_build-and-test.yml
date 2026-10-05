@@ -19,6 +19,9 @@ jobs:
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e3a6093324a24968876782153286f52db8b29fd8
         with:
           solution: Legacy.Maliev.CompatibilityContracts.slnx
+      - name: Verify retained entity helper boundaries
+        shell: bash
+        run: dotnet test Legacy.Maliev.CompatibilityContracts.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~RetainedEntityHelperContractTests|FullyQualifiedName~RetainedPagination"
       - name: Verify package can be produced
         shell: bash
         run: dotnet pack src/Legacy.Maliev.CompatibilityContracts/Legacy.Maliev.CompatibilityContracts.csproj --configuration Release --no-build --no-restore --output artifacts

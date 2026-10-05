@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using System.Xml.Linq;
 using Maliev.Common.Enumerations;
 using Maliev.MessagingContracts.Contracts.Iam;
 
@@ -7,6 +8,41 @@ namespace Legacy.Maliev.CompatibilityContracts.Tests;
 
 public sealed class RetainedEntityHelperContractTests
 {
+    [Fact]
+    public void GeneratedDocumentation_AccompaniesRetainedEntityTypesAndQueryParameters()
+    {
+        var path = Path.ChangeExtension(typeof(PermissionRegistrationRequest).Assembly.Location, ".xml");
+        Assert.True(File.Exists(path));
+        var members = XDocument.Load(path).Descendants("member").ToDictionary(
+            member => Assert.IsType<string>(member.Attribute("name")?.Value), StringComparer.Ordinal);
+        foreach (var name in new[]
+        {
+            "T:Maliev.Entities.ViewModels.NotificationModel",
+            "P:Maliev.Entities.ViewModels.NotificationModel.Content",
+            "P:Maliev.Entities.ViewModels.NotificationModel.Severity",
+            "T:Maliev.Entities.ViewModels.PaginatedListWebApi`1",
+            "M:Maliev.Entities.ViewModels.PaginatedListWebApi`1.#ctor",
+            "M:Maliev.Entities.ViewModels.PaginatedListWebApi`1.#ctor(System.Collections.Generic.List{`0},System.Int32,System.Int32,System.Int32)",
+            "P:Maliev.Entities.ViewModels.PaginatedListWebApi`1.Items",
+            "P:Maliev.Entities.ViewModels.PaginatedListWebApi`1.PageIndex",
+            "P:Maliev.Entities.ViewModels.PaginatedListWebApi`1.TotalPages",
+            "P:Maliev.Entities.ViewModels.PaginatedListWebApi`1.TotalRecords",
+            "P:Maliev.Entities.ViewModels.PaginatedListWebApi`1.HasNextPage",
+            "P:Maliev.Entities.ViewModels.PaginatedListWebApi`1.HasPreviousPage",
+            "M:Maliev.Entities.ViewModels.PaginatedListWebApi`1.CreateAsync(System.Linq.IQueryable{`0},System.Int32,System.Int32)",
+        })
+        {
+            Assert.True(members.TryGetValue(name, out var member), $"Missing generated XML member {name}");
+            Assert.NotNull(member);
+            Assert.False(string.IsNullOrWhiteSpace(member.Element("summary")?.Value));
+        }
+
+        var query = members["M:Maliev.Entities.ViewModels.PaginatedListWebApi`1.CreateAsync(System.Linq.IQueryable{`0},System.Int32,System.Int32)"];
+        Assert.Equal(new[] { "source", "pageIndex", "pageSize" },
+            query.Elements("param").Select(parameter => parameter.Attribute("name")?.Value));
+        Assert.Contains("null", query.Element("returns")?.Value ?? string.Empty, StringComparison.Ordinal);
+    }
+
     private static Type EntityType(string name)
     {
         var type = Assert.IsAssignableFrom<Type>(typeof(PermissionRegistrationRequest).Assembly.GetType(name));
