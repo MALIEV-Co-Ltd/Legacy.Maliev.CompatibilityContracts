@@ -56,3 +56,42 @@ message envelope. Its owner obligation, along with the removed source outage
 notice lifecycle, needs separate evidence before the initial source commit can
 be fully resolved. Existing CAD format entries are compatibility data; this slice
 does not add CNC processing functionality.
+
+## Source-resolved temporary notice lifecycle (issue 19)
+
+The final source state deliberately removes the temporary LINE outage flag; it
+must not be reintroduced as a permanently unavailable service or inferred owner
+retirement. Introduction `90f34b389c298d1ce85abe2ae7ac92877dbbf7af`
+(parent `550eaeaac33f5e4fb016a48fc79459bc536a8f79`) adds
+`Maliev.Common/ServiceNotices.cs` and its generated XML entries. Removal
+`3879b78ef67c70b82cef76fc3593ba7e58d39fc7`
+(parent `4470620dcdfa6a38120cef04e112dffcad63d37c`) deletes that
+same type and returns `Maliev.Common/Maliev.Common.xml` to its prior contents.
+This is explicit source supersession, not an approval to retire unrelated code.
+
+The existing Common contract tests now inspect the actual loaded shared assembly
+for absence of `Maliev.Common.ServiceNotices`, and its generated XML for absence
+of the exact removed type and `IsLineOaCompromised` property entries. All existing
+positive shared-type, XML-summary, social-destination, enum, registry and boolean
+validation assertions are retained. These assertions protect the final public
+contract from accidentally exposing a stale outage flag or documentation; they
+do not simulate a LINE outage or exercise an external provider.
+
+This tests/docs-only successor has not been built or executed. The existing
+Release build, full test suite, formatting, transitive audit, secret scan, pack,
+and raw owned-assembly coverage checks (unchanged 80% floor) remain required on
+the exact proposed head and protected main. The XML test reads the generated XML
+beside the loaded assembly, not a NuGet archive. Acceptance must separately
+inspect the package produced by the existing pack step to confirm its assembly
+and XML carry this same final contract; pack success alone is not content proof.
+
+The source removal also changes ten Web production/resource/script paths and
+four Web tests. Real active and retained public consumers must independently
+retain functional LINE/contact channels without the resolved outage notice;
+this Contracts slice cannot certify Web runtime acceptance. The committed owner
+record for the removal lists CompatibilityContracts, ServiceDefaults and Web as
+pending. ServiceDefaults still needs an exact target/dependency disposition and
+its existing applicable consumer evidence attached by its owner; absence of the
+flag in a source tree is not an independently qualified owner result. No shared
+SDK or Web code is modified here. Neither this slice nor a passing Contracts
+suite alone resolves the whole removal or the mixed introduction commit.

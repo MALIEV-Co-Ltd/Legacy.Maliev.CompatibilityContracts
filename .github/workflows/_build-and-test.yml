@@ -24,7 +24,61 @@ jobs:
         run: dotnet test Legacy.Maliev.CompatibilityContracts.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~RetainedEntityHelperContractTests|FullyQualifiedName~RetainedPagination"
       - name: Verify package can be produced
         shell: bash
-        run: dotnet pack src/Legacy.Maliev.CompatibilityContracts/Legacy.Maliev.CompatibilityContracts.csproj --configuration Release --no-build --no-restore --output artifacts
+        run: |
+          set -euo pipefail
+          dotnet pack src/Legacy.Maliev.CompatibilityContracts/Legacy.Maliev.CompatibilityContracts.csproj --configuration Release --no-build --no-restore --output artifacts
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          import zipfile
+
+          try:
+              packages = [
+                  path for path in Path("artifacts").iterdir()
+                  if path.suffix in (".nupkg", ".snupkg")
+              ]
+              if len(packages) != 1 or packages[0].suffix != ".nupkg":
+                  raise ValueError()
+              assembly = "Legacy.Maliev.CompatibilityContracts"
+              built = Path("src") / assembly / "bin/Release/net10.0"
+              tested = Path("tests") / (assembly + ".Tests") / "bin/Release/net10.0"
+              names = {extension: "lib/net10.0/" + assembly + "." + extension for extension in ("dll", "xml")}
+              with zipfile.ZipFile(packages[0]) as package:
+                  entries = package.namelist()
+                  if len(entries) != len(set(entries)):
+                      raise ValueError()
+                  owned_entries = {
+                      name for name in entries
+                      if name.endswith("/" + assembly + ".dll") or name.endswith("/" + assembly + ".xml")
+                  }
+                  if owned_entries != set(names.values()):
+                      raise ValueError()
+                  content = {extension: package.read(name) for extension, name in names.items()}
+              for extension, data in content.items():
+                  filename = assembly + "." + extension
+                  if data != (built / filename).read_bytes() or data != (tested / filename).read_bytes():
+                      raise ValueError()
+              document = ET.fromstring(content["xml"])
+              if document.findtext("assembly/name") != assembly:
+                  raise ValueError()
+              members = {member.get("name") for member in document.findall("members/member")}
+              if (
+                  "T:Maliev.Common.ServiceNotices" in members
+                  or "P:Maliev.Common.ServiceNotices.IsLineOaCompromised" in members
+                  or "T:Maliev.Common.SocialNetworks" not in members
+                  or "P:Maliev.Common.SocialNetworks.WhatsApp" not in members
+              ):
+                  raise ValueError()
+              hashes = [
+                  hashlib.sha256(packages[0].read_bytes()).hexdigest(),
+                  hashlib.sha256(content["dll"]).hexdigest(),
+                  hashlib.sha256(content["xml"]).hexdigest(),
+              ]
+          except Exception:
+              raise SystemExit("[package-content] FAIL") from None
+          print("[package-content] PASS archive_sha256=" + hashes[0] + " dll_sha256=" + hashes[1] + " xml_sha256=" + hashes[2])
+          PY
       - name: Measure raw owned assembly coverage without exclusions
         shell: bash
         run: dotnet test Legacy.Maliev.CompatibilityContracts.slnx --configuration Release --no-build --no-restore --collect "XPlat Code Coverage" --settings coverage.runsettings --results-directory coverage-results
