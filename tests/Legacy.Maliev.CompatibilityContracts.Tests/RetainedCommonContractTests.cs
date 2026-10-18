@@ -23,6 +23,8 @@ public sealed class RetainedCommonContractTests
         var document = XDocument.Load(path);
         var members = document.Descendants("member").ToDictionary(
             member => Assert.IsType<string>(member.Attribute("name")?.Value), StringComparer.Ordinal);
+        Assert.DoesNotContain("T:Maliev.Common.ServiceNotices", members.Keys);
+        Assert.DoesNotContain("P:Maliev.Common.ServiceNotices.IsLineOaCompromised", members.Keys);
         foreach (var name in new[]
         {
             "T:Maliev.Common.SocialNetworks",
@@ -44,6 +46,7 @@ public sealed class RetainedCommonContractTests
     [Fact]
     public void SocialLinks_RetainExactStaticGetterSurfaceAndDestinations()
     {
+        Assert.Null(typeof(PermissionRegistrationRequest).Assembly.GetType("Maliev.Common.ServiceNotices"));
         var expected = new Dictionary<string, string>
         {
             ["Facebook"] = "https://www.facebook.com/maliev.manufacturing/",
