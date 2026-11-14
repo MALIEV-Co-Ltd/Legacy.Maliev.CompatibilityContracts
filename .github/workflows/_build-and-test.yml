@@ -15,10 +15,42 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Install .NET 10 runtime for compatibility tests
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: 10.0.404
+      - name: Verify .NET 10 project-reference consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer="$RUNNER_TEMP/contracts-sdk10-consumer"
+          mkdir -p "$consumer"
+          cp nuget.config "$consumer/NuGet.Config"
+          python3 - "$consumer" "$GITHUB_WORKSPACE" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+          import xml.etree.ElementTree as ET
+
+          consumer = Path(sys.argv[1])
+          repo = Path(sys.argv[2])
+          (consumer / "global.json").write_text(json.dumps({"sdk": {"version": "10.0.404", "rollForward": "disable"}}))
+          project = ET.Element("Project", Sdk="Microsoft.NET.Sdk")
+          properties = ET.SubElement(project, "PropertyGroup")
+          ET.SubElement(properties, "TargetFramework").text = "net10.0"
+          references = ET.SubElement(project, "ItemGroup")
+          ET.SubElement(references, "ProjectReference", Include=str(repo / "src/Legacy.Maliev.CompatibilityContracts/Legacy.Maliev.CompatibilityContracts.csproj"))
+          ET.ElementTree(project).write(consumer / "consumer.csproj", encoding="unicode")
+          (consumer / "Probe.cs").write_text("public static class Probe { public static string Url => Maliev.Common.SocialNetworks.Facebook; }\n")
+          PY
+          cd "$consumer"
+          test "$(dotnet --version)" = "10.0.404"
+          dotnet build consumer.csproj --configuration Release --disable-build-servers -warnaserror
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e3a6093324a24968876782153286f52db8b29fd8
         with:
           solution: Legacy.Maliev.CompatibilityContracts.slnx
+          dotnet-version: 11.0.100
       - name: Verify retained entity helper boundaries
         shell: bash
         run: dotnet test Legacy.Maliev.CompatibilityContracts.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~RetainedEntityHelperContractTests|FullyQualifiedName~RetainedPagination"
@@ -41,9 +73,11 @@ jobs:
               if len(packages) != 1 or packages[0].suffix != ".nupkg":
                   raise ValueError()
               assembly = "Legacy.Maliev.CompatibilityContracts"
-              built = Path("src") / assembly / "bin/Release/net10.0"
-              tested = Path("tests") / (assembly + ".Tests") / "bin/Release/net10.0"
-              names = {extension: "lib/net10.0/" + assembly + "." + extension for extension in ("dll", "xml")}
+              frameworks = ("net10.0", "net11.0")
+              names = {
+                  (framework, extension): "lib/" + framework + "/" + assembly + "." + extension
+                  for framework in frameworks for extension in ("dll", "xml")
+              }
               with zipfile.ZipFile(packages[0]) as package:
                   entries = package.namelist()
                   if len(entries) != len(set(entries)):
@@ -54,40 +88,47 @@ jobs:
                   }
                   if owned_entries != set(names.values()):
                       raise ValueError()
-                  content = {extension: package.read(name) for extension, name in names.items()}
-              for extension, data in content.items():
+                  content = {key: package.read(name) for key, name in names.items()}
+              for (framework, extension), data in content.items():
                   filename = assembly + "." + extension
-                  if data != (built / filename).read_bytes() or data != (tested / filename).read_bytes():
+                  built = Path("src") / assembly / "bin/Release" / framework / filename
+                  tested = Path("tests") / (assembly + ".Tests") / "bin/Release" / framework / filename
+                  if data != built.read_bytes() or data != tested.read_bytes():
                       raise ValueError()
-              document = ET.fromstring(content["xml"])
-              if document.findtext("assembly/name") != assembly:
-                  raise ValueError()
-              members = {member.get("name") for member in document.findall("members/member")}
-              if (
-                  "T:Maliev.Common.ServiceNotices" in members
-                  or "P:Maliev.Common.ServiceNotices.IsLineOaCompromised" in members
-                  or "T:Maliev.Common.SocialNetworks" not in members
-                  or "P:Maliev.Common.SocialNetworks.WhatsApp" not in members
-              ):
-                  raise ValueError()
-              hashes = [
-                  hashlib.sha256(packages[0].read_bytes()).hexdigest(),
-                  hashlib.sha256(content["dll"]).hexdigest(),
-                  hashlib.sha256(content["xml"]).hexdigest(),
-              ]
+                  if extension == "xml":
+                      document = ET.fromstring(data)
+                      if document.findtext("assembly/name") != assembly:
+                          raise ValueError()
+                      members = {member.get("name") for member in document.findall("members/member")}
+                      if (
+                          "T:Maliev.Common.ServiceNotices" in members
+                          or "P:Maliev.Common.ServiceNotices.IsLineOaCompromised" in members
+                          or "T:Maliev.Common.SocialNetworks" not in members
+                          or "P:Maliev.Common.SocialNetworks.WhatsApp" not in members
+                      ):
+                          raise ValueError()
+              hashes = [hashlib.sha256(packages[0].read_bytes()).hexdigest()]
+              hashes.extend(hashlib.sha256(content[(framework, extension)]).hexdigest()
+                            for framework in frameworks for extension in ("dll", "xml"))
           except Exception:
               raise SystemExit("[package-content] FAIL") from None
-          print("[package-content] PASS archive_sha256=" + hashes[0] + " dll_sha256=" + hashes[1] + " xml_sha256=" + hashes[2])
+          print("[package-content] PASS archive_sha256=" + hashes[0] + " net10_dll_sha256=" + hashes[1] + " net10_xml_sha256=" + hashes[2] + " net11_dll_sha256=" + hashes[3] + " net11_xml_sha256=" + hashes[4])
           PY
       - name: Measure raw owned assembly coverage without exclusions
         shell: bash
-        run: dotnet test Legacy.Maliev.CompatibilityContracts.slnx --configuration Release --no-build --no-restore --collect "XPlat Code Coverage" --settings coverage.runsettings --results-directory coverage-results
+        run: |
+          set -euo pipefail
+          for framework in net10.0 net11.0; do
+            dotnet test Legacy.Maliev.CompatibilityContracts.slnx --configuration Release --no-build --no-restore --framework "$framework" --collect "XPlat Code Coverage" --settings coverage.runsettings --results-directory "coverage-results/$framework"
+          done
       - name: Require at least 80 percent raw owned assembly coverage
         shell: pwsh
         run: |
-          $reports = @(Get-ChildItem -LiteralPath coverage-results -Filter coverage.cobertura.xml -Recurse)
-          if ($reports.Count -ne 1) { throw "Expected exactly one owned assembly coverage report." }
-          ./eng/Assert-OwnedCoverage.ps1 -CoveragePath $reports[0].FullName
+          foreach ($framework in @("net10.0", "net11.0")) {
+            $reports = @(Get-ChildItem -LiteralPath "coverage-results/$framework" -Filter coverage.cobertura.xml -Recurse)
+            if ($reports.Count -ne 1) { throw "Expected exactly one owned assembly coverage report for $framework." }
+            ./eng/Assert-OwnedCoverage.ps1 -CoveragePath $reports[0].FullName
+          }
       - name: Preserve raw compatibility coverage
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
